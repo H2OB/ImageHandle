@@ -54,6 +54,7 @@
         
         @autoreleasepool {
             
+             #warning 这里用的是YYKit里面处理图片圆角的分类 如果你不用刻意用你习惯的
             newImage = [newImage imageByRoundCornerRadius:radius *[UIScreen mainScreen].scale];
         }
         

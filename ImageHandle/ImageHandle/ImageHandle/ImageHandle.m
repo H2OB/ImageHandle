@@ -9,8 +9,8 @@
 #import "ImageHandle.h"
 
 #import <YYKit.h>
-#import <AFNetworking.h>
 #import <SDWebImage/UIImageView+WebCache.h>
+#import <SDWebImageCoder.h>
 
 
 
@@ -23,9 +23,13 @@
  */
 + (BOOL)containsImageForKey:(NSString *)key{
     
-    return [[YYImageCache sharedCache] containsImageForKey:key];
+#warning 下面方法二选一
     
+     return [[YYImageCache sharedCache] containsImageForKey:key]; // YYKit
     
+     return [[SDImageCache sharedImageCache] diskImageDataExistsWithKey:key]; //SDWebImage
+    
+   
     
 }
 
@@ -37,7 +41,11 @@
  */
 + (void)cacheImage:(UIImage *)image ForKey:(NSString *)key{
     
+    #warning 下面方法二选一
+    
     [[YYImageCache sharedCache] setImage:image forKey:key];
+    
+    [[SDImageCache sharedImageCache]  storeImage:image forKey:key completion:nil];
     
 }
 
@@ -49,10 +57,24 @@
  */
 + (void)getImageForKey:(NSString *)key result:(void(^)(UIImage *  image))result{
     
+    #warning 下面方法二选一
     
     [[YYImageCache sharedCache] getImageForKey:key withType:YYImageCacheTypeAll withBlock:^(UIImage * _Nullable image, YYImageCacheType type) {
         result(image);
     }];
+    
+    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+        
+       UIImage *image =   [[SDImageCache sharedImageCache] imageFromCacheForKey:key];
+        
+        result(image);
+        
+    });
+
+
+    
+   
+    
     
     
 }
@@ -66,11 +88,21 @@
 
 + (void)downloadImageForKey:(NSString *)key result:(void(^)(UIImage *  image))result{
     
+    #warning 下面方法二选一
+    
     [[YYWebImageManager sharedManager] requestImageWithURL:[NSURL URLWithString:key] options:YYWebImageOptionAllowBackgroundTask progress:nil transform:nil completion:^(UIImage * _Nullable image, NSURL * _Nonnull url, YYWebImageFromType from, YYWebImageStage stage, NSError * _Nullable error) {
         
         result(image);
         
     }];
+    
+    
+    [[SDWebImageDownloader sharedDownloader] downloadImageWithURL:[NSURL URLWithString:key] options:SDWebImageDownloaderContinueInBackground progress:nil completed:^(UIImage * _Nullable image, NSData * _Nullable data, NSError * _Nullable error, BOOL finished) {
+       
+        result(image);
+        
+    }];
+    
  
 }
 
@@ -93,6 +125,9 @@
     
     return ^UIImage*(CGSize viewSize,UIImage *image){
         
+        //********处理方式的核心是 取图片中心的位置  然后缩放到imageView尺寸的 [UIScreen mainScreen].scale 倍
+        
+        
         //屏幕缩放比例
         CGFloat screenScale = [UIScreen mainScreen].scale;
         
@@ -112,11 +147,15 @@
         
         @autoreleasepool {
             
-            newImage = [image imageByResizeToSize:clipSize contentMode:UIViewContentModeScaleAspectFill];
+            #warning 这里用的是YYKit里面处理图片的分类 如果你不用刻意用你习惯的
+            //对图片进行处理
             
-            newImage = [newImage imageByResizeToSize:newSize];
+            newImage = [image imageByResizeToSize:clipSize contentMode:UIViewContentModeScaleAspectFill]; //先取出适合尺寸的图片
             
-            newImage = [newImage imageByDecoded]; //解码图片
+            newImage = [newImage imageByResizeToSize:newSize]; //缩放图片
+            
+            newImage = [newImage imageByDecoded]; //解码图片(YYKit自带)
+
         }
         
         
@@ -126,8 +165,5 @@
     };
     
 }
-
-
-
 
 @end
