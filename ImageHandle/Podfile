@@ -1,0 +1,15 @@
+
+
+
+platform :ios, '8.0'
+
+target 'ImageHandle' do
+
+    pod 'SDWebImage'
+    pod 'YYKit’
+    pod 'AFNetworking'
+    
+end
+
+
+
